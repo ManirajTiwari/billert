@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  password           String
+  name               String?
+  pharmacyName       String?
+  phoneNumber        String?
+  secondaryPhone     String?
+  address            String?
+  currencyName       String?    @default("US Dollar")
+  currencySymbol     String?    @default("$")
+  subscriptionActive Boolean    @default(false)
+  logoUrl            String?
+  patients           Patient[]
+  medicines          Medicine[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  ptid        String?  @unique
+  name        String
+  age         Int
+  gender      String
+  phoneNumber String
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bills      Bill[]
+  draftBills DraftBill[]
+}
+
+model Medicine {
+  id                String        @id @default(cuid())
+  name              String
+  company           String
+  type              String // e.g., Tablet, Syrup, Capsule
+  noOfBoxes         Int           @default(0)
+  stripsPerBox      Int           @default(0)
+  tabletsPerBox     Int           @default(0)
+  priceOfBox        Float         @default(0)
+  priceOfStrip      Float         @default(0)
+  priceOfTablet     Float         @default(0)
+  lowStockThreshold Int           @default(0)
+  lowStockUnit      String // e.g., Box, Strip, Tablet
+  batches           BatchExpiry[]
+  userId            String?
+  user              User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  billItems BillItem[]
+}
+
+model BatchExpiry {
+  id          String   @id @default(cuid())
+  batchNumber String
+  unitType    String // Box, Strip, Tablet
+  quantity    Int
+  expiryDate  DateTime
+  medicineId  String
+  medicine    Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+}
+
+model Bill {
+  id            String     @id @default(cuid())
+  patientId     String?
+  patient       Patient?   @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  patientName   String
+  grossPrice    Float
+  totalDiscount Float
+  netPrice      Float
+  paymentMethod String // cash, upi, card
+  isCancelled   Boolean    @default(false)
+  cancelRemark  String?
+  items         BillItem[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model BillItem {
+  id          String    @id @default(cuid())
+  billId      String
+  bill        Bill      @relation(fields: [billId], references: [id], onDelete: Cascade)
+  medicineId  String?
+  medicine    Medicine? @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+  name        String
+  unitType    String // BOX, STRIP, TABLET
+  quantity    Int
+  price       Float
+  discount    Float
+  batchNumber String?
+  expiryDate  String?
+}
+
+model DraftBill {
+  id            String          @id @default(cuid())
+  patientId     String?
+  patient       Patient?        @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  patientName   String
+  grossPrice    Float
+  totalDiscount Float
+  netPrice      Float
+  paymentMethod String
+  items         DraftBillItem[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model DraftBillItem {
+  id          String    @id @default(cuid())
+  draftBillId String
+  draftBill   DraftBill @relation(fields: [draftBillId], references: [id], onDelete: Cascade)
+  medicineId  String?
+  name        String
+  unitType    String
+  quantity    Int
+  price       Float
+  discount    Float
+  batchNumber String?
+  expiryDate  String?
+}
